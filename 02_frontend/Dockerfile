@@ -8,14 +8,18 @@ WORKDIR /app
 
 # Copy package files and install dependencies
 COPY package*.json ./
-RUN npm ci && npm cache clean --force
+
+# ติดตั้ง dependencies ทั้งหมด (รวม lucide-react)
+RUN npm install && npm cache clean --force
 
 # Copy source files and build
 COPY . .
+
 ENV NEXT_TELEMETRY_DISABLED=1 \
     API_HOST=${API_HOST}
-RUN npm run build
 
+# Build Next.js
+RUN npm run build
 
 # ---------- Stage 2: Production runtime ----------
 FROM node:20-alpine AS runner
@@ -30,9 +34,11 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
 # Copy built application
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./ 
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 USER nextjs
 
